@@ -1,5 +1,6 @@
 package io.github.zhangxh.networkmapping.entity;
 
-public interface IParam {
+import java.util.Map;
 
+public interface IParam extends Map<String, Object> {
 }

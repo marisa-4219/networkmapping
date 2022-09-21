@@ -1,6 +1,7 @@
 package io.github.zhangxh.networkmapping.entity.impl;
 
-import  io.github.zhangxh.networkmapping.entity.IParam;
+import io.github.zhangxh.networkmapping.entity.IBody;
+import io.github.zhangxh.networkmapping.entity.IParam;
 import  io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
 import  io.github.zhangxh.networkmapping.handler.IAsyncResponseHandler;
 import org.springframework.http.HttpHeaders;
@@ -13,8 +14,9 @@ public class RequestEntity {
 
     private String requestUrl;
 
-    private IParam param;
+    private IBody body;
 
+    private IParam param;
     private MediaType mediaType;
 
     private HttpMethod httpMethod;
@@ -38,9 +40,10 @@ public class RequestEntity {
     public RequestEntity() {
     }
 
-    public RequestEntity(String requestUrl, IParam param, MediaType mediaType, HttpMethod httpMethod, HttpHeaders httpHeaders, boolean auth, boolean async, IAsyncResponseHandler<Object> asyncHandlerImpl, Class<? extends INetworkMappingResponseFormatter> formatter, Class<?> resultType, Type resultGenericType) {
+    public RequestEntity(String requestUrl, IBody body,IParam param, MediaType mediaType, HttpMethod httpMethod, HttpHeaders httpHeaders, boolean auth, boolean async, IAsyncResponseHandler<Object> asyncHandlerImpl, Class<? extends INetworkMappingResponseFormatter> formatter, Class<?> resultType, Type resultGenericType) {
         this.requestUrl = requestUrl;
-        this.param = param;
+        this.body = body;
+        this.param =param;
         this.mediaType = mediaType;
         this.httpMethod = httpMethod;
         this.httpHeaders = httpHeaders;
@@ -60,12 +63,21 @@ public class RequestEntity {
         this.requestUrl = requestUrl;
     }
 
+    public IBody getBody() {
+        return body;
+    }
+
+    public void setBody(IBody body) {
+        this.body = body;
+    }
+
     public IParam getParam() {
         return param;
     }
 
-    public void setParam(IParam param) {
+    public RequestEntity setParam(IParam param) {
         this.param = param;
+        return this;
     }
 
     public MediaType getMediaType() {

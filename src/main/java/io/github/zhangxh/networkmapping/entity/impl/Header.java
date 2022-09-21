@@ -9,8 +9,9 @@ public class Header implements IHeader {
 
     public final Map<String, String> container = new ConcurrentHashMap<>();
 
-    public void append(String key, String value) {
+    public Header append(String key, String value) {
         container.put(key, value);
+        return this;
     }
 
     public String get(String key) {

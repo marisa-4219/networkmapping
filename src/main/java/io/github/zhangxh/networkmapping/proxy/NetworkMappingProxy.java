@@ -5,10 +5,7 @@ import io.github.zhangxh.networkmapping.annotation.MakeQuiet;
 import io.github.zhangxh.networkmapping.annotation.Mapping;
 import io.github.zhangxh.networkmapping.annotation.MappingPathVariable;
 import io.github.zhangxh.networkmapping.annotation.NetworkMapping;
-import io.github.zhangxh.networkmapping.entity.IFormData;
-import io.github.zhangxh.networkmapping.entity.IHeader;
-import io.github.zhangxh.networkmapping.entity.IHost;
-import io.github.zhangxh.networkmapping.entity.IParam;
+import io.github.zhangxh.networkmapping.entity.*;
 import io.github.zhangxh.networkmapping.entity.impl.RequestEntity;
 import io.github.zhangxh.networkmapping.exception.RequestException;
 import io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
@@ -66,8 +63,12 @@ public class NetworkMappingProxy implements InvocationHandler {
         if (methodAnnotation == null) return null;
         // 如果定义了host
         IHost host = getInterfaceImplForArgs(args, IHost.class);
+        // 如果定义了路径
+        IRequestURL customURL = getInterfaceImplForArgs(args, IRequestURL.class);
         // 获取请求地址
-        String requestUrl = getRequestUrl(classAnnotation, methodAnnotation, host);
+        String requestUrl = getRequestUrl(classAnnotation, methodAnnotation, host, customURL);
+
+
         // 获取方法参数定义
         Parameter[] parameters = method.getParameters();
         if (parameters != null) {
@@ -85,18 +86,16 @@ public class NetworkMappingProxy implements InvocationHandler {
             }
         }
         // 获取参数
-        IParam param = getInterfaceImplForArgs(args, IFormData.class);
+        IParam param = getInterfaceImplForArgs(args, IParam.class);
         if (param != null) {
-            IFormData formData = (IFormData) param;
             StringBuilder builder = new StringBuilder();
             builder.append("?");
-            formData.forEach((key, value) -> builder.append(key).append("=").append(value).append("&"));
+            param.forEach((key, value) -> builder.append(key).append("=").append(value).append("&"));
             builder.deleteCharAt(builder.length() - 1);
             requestUrl += builder;
-        } else {
-            param = getInterfaceImplForArgs(args, IParam.class);
         }
 
+        IBody body = getInterfaceImplForArgs(args, IBody.class);
         // 获取异步请求响应处理对象
         //noinspection unchecked
         final IAsyncResponseHandler<Object> asyncHandlerImpl = getInterfaceImplForArgs(args, IAsyncResponseHandler.class);
@@ -130,7 +129,7 @@ public class NetworkMappingProxy implements InvocationHandler {
 
         RequestEntity requestEntity = new RequestEntity();
         requestEntity.setRequestUrl(requestUrl);
-        requestEntity.setParam(param);
+        requestEntity.setBody(body);
         requestEntity.setMediaType(mediaType);
         requestEntity.setHttpMethod(requestMethod);
         requestEntity.setHttpHeaders(requestHeaders);
@@ -154,10 +153,10 @@ public class NetworkMappingProxy implements InvocationHandler {
         final Logger logger = LoggerFactory.getLogger(method.getDeclaringClass().getName() + "." + method.getName());
         // 发出请求
         if (logger.isDebugEnabled() && properties.isDebugEnabled()) {
-            logger.debug("请求 ->\n\n url：\t\t\t\t" + requestEntity.getRequestUrl() + "\n args：\t\t\t\t" + requestEntity.getParam() + "\n method：\t\t\t" + requestEntity.getHttpMethod() + "\n contentType：\t\t" + requestEntity.getMediaType() + "\n");
+            logger.debug("请求 ->\n\n url：\t\t\t\t" + requestEntity.getRequestUrl() + "\n args：\t\t\t\t" + requestEntity.getBody() + "\n method：\t\t\t" + requestEntity.getHttpMethod() + "\n contentType：\t\t" + requestEntity.getMediaType() + "\n");
         }
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(requestEntity.getParam() != null ? JSON.toJSONString(requestEntity.getParam()) : null, requestEntity.getHttpHeaders());
+        HttpEntity<String> httpEntity = new HttpEntity<>(requestEntity.getBody() != null ? requestEntity.getBody().getContent() : null, requestEntity.getHttpHeaders());
 
         if (requestEntity.isAsync()) {
             asyncRequest(method, requestEntity, httpEntity);
@@ -226,9 +225,15 @@ public class NetworkMappingProxy implements InvocationHandler {
     }
 
 
-    public String getRequestUrl(NetworkMapping classAnnotation, Mapping methodAnnotation, IHost host) {
+    public String getRequestUrl(NetworkMapping classAnnotation, Mapping methodAnnotation, IHost host, IRequestURL customURL) {
+        if (customURL != null && customURL.isFull()) {
+            return customURL.getURL();
+        }
         // 请求地址
         String url = methodAnnotation.value();
+        if (customURL != null) {
+            url = customURL.getURL();
+        }
 
         if (StringUtils.hasText(classAnnotation.value())) {
             if (classAnnotation.value().endsWith("/") && url.startsWith("/")) {
