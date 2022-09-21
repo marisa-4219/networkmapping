@@ -6,10 +6,15 @@ import io.github.zhangxh.networkmapping.entity.impl.RequestEntity;
 import io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
 
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 
 public class DefaultResponseFormatter implements INetworkMappingResponseFormatter {
     @Override
-    public Object format(String response, RequestEntity requestEntity) {
-        return JSONObject.parseObject(response, new ParameterizedTypeImpl(new Type[]{requestEntity.getResultGenericType()}, null, requestEntity.getResultType()));
+    public Object format(byte[] response, RequestEntity requestEntity) {
+        String json = null;
+        if (response != null) {
+            json = new String(response, StandardCharsets.UTF_8);
+        }
+        return JSONObject.parseObject(json, new ParameterizedTypeImpl(new Type[]{requestEntity.getResultGenericType()}, null, requestEntity.getResultType()));
     }
 }

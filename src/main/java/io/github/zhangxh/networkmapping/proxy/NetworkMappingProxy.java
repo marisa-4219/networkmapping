@@ -25,6 +25,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -197,26 +198,34 @@ public class NetworkMappingProxy implements InvocationHandler {
 
         responseHandler.setRequestEntity(requestEntity);
 
-        String response;
+        byte[] response;
         try {
             switch (requestEntity.getHttpMethod()) {
                 case POST:
-                    response = restTemplate.postForObject(requestEntity.getRequestUrl(), httpEntity, String.class);
+                    response = restTemplate.postForObject(requestEntity.getRequestUrl(), httpEntity, byte[].class);
                     break;
                 case GET:
-                    response = restTemplate.exchange(requestEntity.getRequestUrl(), HttpMethod.GET, httpEntity, String.class).getBody();
+                    response = restTemplate.exchange(requestEntity.getRequestUrl(), HttpMethod.GET, httpEntity, byte[].class).getBody();
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的请求方式 -> " + requestEntity.getHttpMethod());
             }
 
             if (logger.isDebugEnabled() && properties.isDebugEnabled()) {
-                logger.debug("响应 - >\n\n url：\t\t\t\t" + requestEntity.getRequestUrl() + "\n response：\t\t\t" + shortenLongText(response, properties.getDebugResponseBodyTruncationLength()) + "\n time:\t\t\t\t" + (System.currentTimeMillis() - startTime) + "ms\n");
+                String responseStr = null;
+                if (response != null) {
+                    responseStr = shortenLongText(new String(response, StandardCharsets.UTF_8), properties.getDebugResponseBodyTruncationLength());
+                }
+                logger.debug("响应 - >\n\n url：\t\t\t\t" + requestEntity.getRequestUrl() + "\n response：\t\t\t" + responseStr + "\n time:\t\t\t\t" + (System.currentTimeMillis() - startTime) + "ms\n");
             }
 
             return responseHandler.response(formatter.format(response, requestEntity));
         } catch (HttpServerErrorException e) {
-            return responseHandler.response(formatter.format(e.getMessage(), requestEntity));
+            byte[] errorMsgByteArray = null;
+            if (e.getMessage() != null) {
+                errorMsgByteArray = e.getMessage().getBytes(StandardCharsets.UTF_8);
+            }
+            return responseHandler.response(formatter.format(errorMsgByteArray, requestEntity));
         } catch (Throwable e) {
             responseHandler.exception(e);
             return null;
