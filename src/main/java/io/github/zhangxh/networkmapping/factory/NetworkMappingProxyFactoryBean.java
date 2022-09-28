@@ -46,7 +46,7 @@ public class NetworkMappingProxyFactoryBean implements FactoryBean<Object> {
     }
 
     public IApplicationStorage getStorage() {
-        if (storage == null) storage = beanFactory.getBean(getProperties().getStorage());
+        if (storage == null) storage = beanFactory.getBean(IApplicationStorage.class);
         return storage;
     }
 

@@ -1,6 +1,6 @@
-package io.github.zhangxh.networkmapping.entity.impl;
+package io.github.zhangxh.networkmapping.entity.response.impl;
 
-import  io.github.zhangxh.networkmapping.entity.IResult;
+import io.github.zhangxh.networkmapping.entity.response.IResult;
 
 
 public class Result<T> implements IResult<T> {

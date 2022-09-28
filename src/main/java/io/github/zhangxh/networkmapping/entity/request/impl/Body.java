@@ -1,7 +1,7 @@
-package io.github.zhangxh.networkmapping.entity.impl;
+package io.github.zhangxh.networkmapping.entity.request.impl;
 
 import com.alibaba.fastjson.JSON;
-import io.github.zhangxh.networkmapping.entity.IBody;
+import io.github.zhangxh.networkmapping.entity.request.IBody;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -43,6 +43,11 @@ public class Body extends HashMap<String, Object> implements IBody {
 
     @Override
     public String getContent() {
+        return JSON.toJSONString(this);
+    }
+
+
+    public String toString(){
         return JSON.toJSONString(this);
     }
 }

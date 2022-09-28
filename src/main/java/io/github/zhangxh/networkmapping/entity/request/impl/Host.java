@@ -1,6 +1,7 @@
-package io.github.zhangxh.networkmapping.entity.impl;
+package io.github.zhangxh.networkmapping.entity.request.impl;
 
-import io.github.zhangxh.networkmapping.entity.IHost;
+import com.alibaba.fastjson.JSON;
+import io.github.zhangxh.networkmapping.entity.request.IHost;
 
 public class Host implements IHost {
 
@@ -18,5 +19,9 @@ public class Host implements IHost {
     public Host setHost(String host) {
         this.host = host;
         return this;
+    }
+
+    public String toString(){
+        return JSON.toJSONString(this);
     }
 }

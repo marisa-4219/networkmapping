@@ -1,6 +1,6 @@
 package io.github.zhangxh.networkmapping.handler;
 
-import  io.github.zhangxh.networkmapping.entity.impl.RequestEntity;
+import io.github.zhangxh.networkmapping.entity.RequestEntity;
 
 public abstract class IGlobalResponseHandler {
 

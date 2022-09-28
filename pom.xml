@@ -6,7 +6,7 @@
 
     <groupId>io.github.zhangxh</groupId>
     <artifactId>networkmapping</artifactId>
-    <version>1.02</version>
+    <version>1.05</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>

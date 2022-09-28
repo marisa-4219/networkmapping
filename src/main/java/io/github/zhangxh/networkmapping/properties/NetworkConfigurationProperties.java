@@ -4,8 +4,6 @@ package io.github.zhangxh.networkmapping.properties;
 import com.alibaba.fastjson.JSON;
 import io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
 import io.github.zhangxh.networkmapping.formatter.impl.DefaultResponseFormatter;
-import io.github.zhangxh.networkmapping.storage.IApplicationStorage;
-import io.github.zhangxh.networkmapping.storage.impl.DefaultApplicationStorage;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -24,10 +22,6 @@ public class NetworkConfigurationProperties {
      * mapping文件扫描起始路径
      */
     private String mappingPackage;
-    /**
-     * storage默认实现
-     */
-    private Class<? extends IApplicationStorage> storage = DefaultApplicationStorage.class;
     /**
      * 响应结果格式化默认实现
      */
@@ -80,14 +74,6 @@ public class NetworkConfigurationProperties {
 
     public void setMappingPackage(String mappingPackage) {
         this.mappingPackage = mappingPackage;
-    }
-
-    public Class<? extends IApplicationStorage> getStorage() {
-        return storage;
-    }
-
-    public void setStorage(Class<? extends IApplicationStorage> storage) {
-        this.storage = storage;
     }
 
     public Class<? extends INetworkMappingResponseFormatter> getFormatter() {

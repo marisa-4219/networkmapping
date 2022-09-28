@@ -1,15 +1,16 @@
-package io.github.zhangxh.networkmapping.entity.impl;
+package io.github.zhangxh.networkmapping.entity.request.impl;
 
-import  io.github.zhangxh.networkmapping.entity.IHeader;
+import com.alibaba.fastjson.JSON;
+import io.github.zhangxh.networkmapping.entity.request.IHead;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Header implements IHeader {
+public class Head implements IHead {
 
     public final Map<String, String> container = new ConcurrentHashMap<>();
 
-    public Header append(String key, String value) {
+    public Head append(String key, String value) {
         container.put(key, value);
         return this;
     }
@@ -21,5 +22,9 @@ public class Header implements IHeader {
     @Override
     public Map<String, String> toMap() {
         return container;
+    }
+
+    public String toString(){
+        return JSON.toJSONString(this);
     }
 }

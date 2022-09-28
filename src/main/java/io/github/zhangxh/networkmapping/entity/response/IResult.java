@@ -1,4 +1,4 @@
-package io.github.zhangxh.networkmapping.entity;
+package io.github.zhangxh.networkmapping.entity.response;
 
 public interface IResult<T> {
 

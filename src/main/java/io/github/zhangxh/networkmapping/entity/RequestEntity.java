@@ -1,7 +1,7 @@
-package io.github.zhangxh.networkmapping.entity.impl;
+package io.github.zhangxh.networkmapping.entity;
 
-import io.github.zhangxh.networkmapping.entity.IBody;
-import io.github.zhangxh.networkmapping.entity.IParam;
+import io.github.zhangxh.networkmapping.entity.request.IBody;
+import io.github.zhangxh.networkmapping.entity.request.IQuery;
 import  io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
 import  io.github.zhangxh.networkmapping.handler.IAsyncResponseHandler;
 import org.springframework.http.HttpHeaders;
@@ -11,39 +11,27 @@ import org.springframework.http.MediaType;
 import java.lang.reflect.Type;
 
 public class RequestEntity {
-
     private String requestUrl;
-
-    private IBody body;
-
-    private IParam param;
+    private IParameter parameter;
+    private IQuery query;
     private MediaType mediaType;
-
     private HttpMethod httpMethod;
-
     private HttpHeaders httpHeaders;
-
     private boolean auth;
-
     private boolean async;
-
     private IAsyncResponseHandler<Object> asyncHandlerImpl;
-
     private Class<? extends INetworkMappingResponseFormatter> formatter;
-
     private Class<?> resultType;
-
     private Type resultGenericType;
-
     private boolean quiet;
 
     public RequestEntity() {
     }
 
-    public RequestEntity(String requestUrl, IBody body,IParam param, MediaType mediaType, HttpMethod httpMethod, HttpHeaders httpHeaders, boolean auth, boolean async, IAsyncResponseHandler<Object> asyncHandlerImpl, Class<? extends INetworkMappingResponseFormatter> formatter, Class<?> resultType, Type resultGenericType) {
+    public RequestEntity(String requestUrl, IBody parameter, IQuery query, MediaType mediaType, HttpMethod httpMethod, HttpHeaders httpHeaders, boolean auth, boolean async, IAsyncResponseHandler<Object> asyncHandlerImpl, Class<? extends INetworkMappingResponseFormatter> formatter, Class<?> resultType, Type resultGenericType) {
         this.requestUrl = requestUrl;
-        this.body = body;
-        this.param =param;
+        this.parameter = parameter;
+        this.query = query;
         this.mediaType = mediaType;
         this.httpMethod = httpMethod;
         this.httpHeaders = httpHeaders;
@@ -63,20 +51,20 @@ public class RequestEntity {
         this.requestUrl = requestUrl;
     }
 
-    public IBody getBody() {
-        return body;
+    public IParameter getParameter() {
+        return parameter;
     }
 
-    public void setBody(IBody body) {
-        this.body = body;
+    public void setParameter(IParameter parameter) {
+        this.parameter = parameter;
     }
 
-    public IParam getParam() {
-        return param;
+    public IQuery getQuery() {
+        return query;
     }
 
-    public RequestEntity setParam(IParam param) {
-        this.param = param;
+    public RequestEntity setQuery(IQuery query) {
+        this.query = query;
         return this;
     }
 
