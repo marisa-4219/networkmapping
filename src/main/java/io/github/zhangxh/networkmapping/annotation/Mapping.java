@@ -9,6 +9,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Collections;
 
 /**
  * 映射接口定义
@@ -27,7 +28,12 @@ public @interface Mapping {
     /**
      * @return 数据格式
      */
-    String mediaType() default MediaType.APPLICATION_JSON_VALUE;
+    String mediaType() default MediaType.APPLICATION_JSON_UTF8_VALUE;
+
+    /**
+     * @return 响应格式
+     */
+    String[] acceptType() default {MediaType.APPLICATION_JSON_UTF8_VALUE, MediaType.ALL_VALUE};
 
     /**
      * @return token认证

@@ -15,6 +15,7 @@ import io.github.zhangxh.networkmapping.properties.NetworkConfigurationPropertie
 import io.github.zhangxh.networkmapping.storage.IApplicationStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpServerErrorException;
@@ -23,9 +24,15 @@ import org.springframework.web.client.RestTemplate;
 import java.lang.reflect.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NetworkMappingProxy implements InvocationHandler {
 
@@ -40,14 +47,20 @@ public class NetworkMappingProxy implements InvocationHandler {
     private final Class<?> proxyTarget;
 
     private final ExecutorService threadPool;
+    private final Environment environment;
 
-    public NetworkMappingProxy(NetworkConfigurationProperties properties, IApplicationStorage storage, IGlobalResponseHandler responseHandler, RestTemplate restTemplate, Class<?> proxyTarget) {
+    private final Map<String, String> propertyValueCache = new ConcurrentHashMap<>();
+
+
+    public NetworkMappingProxy(NetworkConfigurationProperties properties, IApplicationStorage storage, IGlobalResponseHandler responseHandler,
+                               RestTemplate restTemplate, Environment environment, Class<?> proxyTarget) {
         this.properties = properties;
         this.storage = storage;
         this.restTemplate = restTemplate;
         this.responseHandler = responseHandler;
         this.proxyTarget = proxyTarget;
         this.threadPool = Executors.newFixedThreadPool(properties.getAsyncMaxThreadPoolSize());
+        this.environment = environment;
     }
 
     @Override
@@ -119,6 +132,12 @@ public class NetworkMappingProxy implements InvocationHandler {
             }
         }
 
+        List<MediaType> accepts = new ArrayList<>();
+        for (String acceptTypeStr : methodAnnotation.acceptType()) {
+            accepts.add(MediaType.parseMediaType(acceptTypeStr));
+        }
+        requestHeaders.setAccept(accepts);
+
         RequestEntity requestEntity = new RequestEntity();
         requestEntity.setRequestUrl(requestUrl);
         requestEntity.setMediaType(mediaType);
@@ -149,9 +168,9 @@ public class NetworkMappingProxy implements InvocationHandler {
         String formContent = null;
         String bodyContent = null;
 
-        if (query != null && StringUtils.hasText(query.getContent())) queryContent = query.getContent();
-        if (form != null && StringUtils.hasText(form.getContent())) formContent = form.getContent();
-        if (body != null && StringUtils.hasText(body.getContent())) bodyContent = body.getContent();
+        if (query != null && !StringUtils.isEmpty(query.getContent())) queryContent = query.getContent();
+        if (form != null && !StringUtils.isEmpty(form.getContent())) formContent = form.getContent().toString();
+        if (body != null && !StringUtils.isEmpty(body.getContent())) bodyContent = body.getContent().toString();
 
         // query parameter
         if (StringUtils.hasText(queryContent)) {
@@ -175,13 +194,25 @@ public class NetworkMappingProxy implements InvocationHandler {
         // 发出请求
         if (logger.isDebugEnabled() && properties.isDebugEnabled()) {
             logger.debug("请求 ->\n\n url：\t\t\t\t" + requestEntity.getRequestUrl()
-                    + "\n headers：\t\t\t\t" + requestEntity.getHttpHeaders()
+                    + "\n headers：\t\t\t" + deconstructionHeader(requestEntity.getHttpHeaders())
                     + "\n args：\t\t\t\t" + requestEntity.getParameter()
                     + "\n method：\t\t\t" + requestEntity.getHttpMethod()
-                    + "\n contentType：\t\t" + requestEntity.getMediaType() + "\n");
+                    + "\n auth：\t\t\t\t" + requestEntity.isAuth()
+                    + "\n async：\t\t\t" + requestEntity.isAsync()
+                    + "\n request-id：\t\t" + requestEntity.getRequestId()
+                    + "\n"
+            );
         }
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(requestEntity.getParameter() != null ? requestEntity.getParameter().getContent() : null, requestEntity.getHttpHeaders());
+        HttpEntity<Object> httpEntity;
+
+        if (requestEntity.getParameter() == null) {
+            httpEntity = new HttpEntity<>(requestEntity.getHttpHeaders());
+        } else if (requestEntity.getMediaType().equals(MediaType.MULTIPART_FORM_DATA) && requestEntity.getParameter() instanceof IForm) {
+            httpEntity = new HttpEntity<>(requestEntity.getParameter().getRaw(), requestEntity.getHttpHeaders());
+        } else {
+            httpEntity = new HttpEntity<>(requestEntity.getParameter().getContent(), requestEntity.getHttpHeaders());
+        }
 
         if (requestEntity.isAsync()) {
             asyncRequest(method, requestEntity, httpEntity);
@@ -192,7 +223,7 @@ public class NetworkMappingProxy implements InvocationHandler {
     }
 
 
-    public void asyncRequest(Method method, RequestEntity requestEntity, HttpEntity<String> httpEntity) {
+    public void asyncRequest(Method method, RequestEntity requestEntity, HttpEntity<Object> httpEntity) {
         threadPool.execute(() -> {
             IAsyncResponseHandler<Object> asyncHandlerImpl = requestEntity.getAsyncHandlerImpl();
             try {
@@ -205,7 +236,7 @@ public class NetworkMappingProxy implements InvocationHandler {
     }
 
 
-    public Object awaitRequest(Method method, RequestEntity requestEntity, HttpEntity<String> httpEntity) throws Throwable {
+    public Object awaitRequest(Method method, RequestEntity requestEntity, HttpEntity<Object> httpEntity) throws Throwable {
         final Logger logger = LoggerFactory.getLogger(method.getDeclaringClass().getName() + "." + method.getName());
 
         long startTime = System.currentTimeMillis();
@@ -247,7 +278,12 @@ public class NetworkMappingProxy implements InvocationHandler {
                 if (response.getBody() != null) {
                     responseStr = shortenLongText(new String(response.getBody(), responseCharset), properties.getDebugResponseBodyTruncationLength());
                 }
-                logger.debug("响应 - >\n\n url：\t\t\t\t" + requestEntity.getRequestUrl() + "\n response：\t\t\t" + responseStr + "\n time:\t\t\t\t" + (System.currentTimeMillis() - startTime) + "ms\n");
+                logger.debug("响应 - >\n\n url：\t\t\t\t" + requestEntity.getRequestUrl()
+                        + "\n headers：\t\t\t" + deconstructionHeader(response.getHeaders())
+                        + "\n response：\t\t\t" + responseStr
+                        + "\n time:\t\t\t\t" + (System.currentTimeMillis() - startTime) + "ms"
+                        + "\n request-id：\t\t" + requestEntity.getRequestId() + '\n'
+                );
             }
 
             return responseHandler.response(formatter.format(response.getBody(), requestEntity, response.getHeaders()));
@@ -285,6 +321,8 @@ public class NetworkMappingProxy implements InvocationHandler {
             }
         }
         String serverHost = properties.getServerHost();
+        if (serverHost == null) serverHost = "";
+
         if (StringUtils.hasText(classAnnotation.serverHost())) {
             serverHost = classAnnotation.serverHost();
         }
@@ -294,7 +332,12 @@ public class NetworkMappingProxy implements InvocationHandler {
         if (host != null && StringUtils.hasText(host.getHost())) {
             serverHost = host.getHost();
         }
-        return serverHost + url;
+        String fullPath = serverHost + url;
+
+        if (fullPath.startsWith("#{") && fullPath.endsWith("}")) {
+            fullPath = readEnvironment(fullPath);
+        }
+        return fullPath;
     }
 
 
@@ -318,10 +361,54 @@ public class NetworkMappingProxy implements InvocationHandler {
         return null;
     }
 
+    private String readEnvironment(String propertyPath) {
+        propertyPath = propertyPath.replaceAll("#\\{", "").replaceAll("}", "");
+        if (!propertyValueCache.containsKey(propertyPath)) {
+            String propertyValue = environment.getProperty(propertyPath);
+            if (!StringUtils.hasText(propertyValue)) {
+                propertyValue = environment.getProperty(transPropertyFormat(propertyPath));
+                if (!StringUtils.hasText(propertyValue)) {
+                    throw new IllegalArgumentException("读取配置项" + propertyPath + "失败！");
+                }
+            }
+            propertyValueCache.put(propertyPath, propertyValue);
+        }
+        return propertyValueCache.get(propertyPath);
+    }
 
-    private static String shortenLongText(String str, int index) {
-        if (str == null) return null;
+    /**
+     * 截断字符串到指定长度
+     */
+    private static String shortenLongText(Object o, int index) {
+        if (o == null) return null;
+        String str = o.toString();
         return str.length() - 1 >= index ? str.substring(0, index) + " ...(省略" + (str.length() - 1 - index) + "个字符)" : str;
+    }
+
+    private static String deconstructionHeader(HttpHeaders headers) {
+        StringBuilder builder = new StringBuilder();
+        headers.forEach((k, v) -> {
+            builder.append("\n").append("\t\t\t\t\t").append(fillSpace(k, 35)).append("\t\t").append(shortenLongText(v, 80));
+        });
+        return builder.toString();
+    }
+
+    private static String fillSpace(String str, int fillLength) {
+        if (fillLength - str.length() < 0) return str;
+        return str + " ".repeat(Math.max(0, fillLength - str.length()));
+    }
+
+    /**
+     * 驼峰转短横线
+     */
+    private static String transPropertyFormat(String propertyPath) {
+        String regex = "([A-Z])";
+        Matcher matcher = Pattern.compile(regex).matcher(propertyPath);
+        while (matcher.find()) {
+            String s = matcher.group();
+            propertyPath = propertyPath.replaceAll(s, "-" + s.toLowerCase());
+        }
+        return propertyPath;
     }
 
 }

@@ -42,10 +42,15 @@ public class Body extends HashMap<String, Object> implements IBody {
     }
 
     @Override
-    public String getContent() {
+    public Object getContent() {
         return JSON.toJSONString(this);
     }
 
+
+    @Override
+    public Object getRaw() {
+        return this;
+    }
 
     public String toString(){
         return JSON.toJSONString(this);

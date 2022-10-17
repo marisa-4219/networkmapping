@@ -2,15 +2,17 @@ package io.github.zhangxh.networkmapping.entity;
 
 import io.github.zhangxh.networkmapping.entity.request.IBody;
 import io.github.zhangxh.networkmapping.entity.request.IQuery;
-import  io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
-import  io.github.zhangxh.networkmapping.handler.IAsyncResponseHandler;
+import io.github.zhangxh.networkmapping.formatter.INetworkMappingResponseFormatter;
+import io.github.zhangxh.networkmapping.handler.IAsyncResponseHandler;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
 import java.lang.reflect.Type;
+import java.util.UUID;
 
 public class RequestEntity {
+    private String requestId = UUID.randomUUID().toString();
     private String requestUrl;
     private IParameter parameter;
     private IQuery query;
@@ -41,6 +43,15 @@ public class RequestEntity {
         this.formatter = formatter;
         this.resultType = resultType;
         this.resultGenericType = resultGenericType;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public RequestEntity setRequestId(String requestId) {
+        this.requestId = requestId;
+        return this;
     }
 
     public String getRequestUrl() {

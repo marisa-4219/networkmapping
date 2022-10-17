@@ -8,6 +8,7 @@ import io.github.zhangxh.networkmapping.storage.IApplicationStorage;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.core.env.Environment;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.StringHttpMessageConverter;
@@ -31,6 +32,8 @@ public class NetworkMappingProxyFactoryBean implements FactoryBean<Object> {
     private IApplicationStorage storage;
 
     private RestTemplate restTemplate;
+
+    private Environment environment;
 
     private BeanFactory beanFactory;
 
@@ -89,6 +92,16 @@ public class NetworkMappingProxyFactoryBean implements FactoryBean<Object> {
         return restTemplate;
     }
 
+    public Environment getEnvironment() {
+        if (environment == null) environment = beanFactory.getBean(Environment.class);
+        return environment;
+    }
+
+    public NetworkMappingProxyFactoryBean setEnvironment(Environment environment) {
+        this.environment = environment;
+        return this;
+    }
+
     public void setRestTemplate(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -110,7 +123,9 @@ public class NetworkMappingProxyFactoryBean implements FactoryBean<Object> {
     }
 
     private Object newInstance(Class<?> target) {
-        return Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{target}, new NetworkMappingProxy(getProperties(), getStorage(),getResponseHandler(), getRestTemplate(), target));
+        return Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+                new Class[]{target},
+                new NetworkMappingProxy(getProperties(), getStorage(), getResponseHandler(), getRestTemplate(), getEnvironment(), target));
     }
 
     @Override

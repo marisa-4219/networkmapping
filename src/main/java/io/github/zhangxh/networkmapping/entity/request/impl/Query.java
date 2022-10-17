@@ -25,6 +25,11 @@ public class Query extends HashMap<String, String> implements IQuery {
         }
     }
 
+    @Override
+    public Object getRaw() {
+        return this;
+    }
+
     public String toString(){
         return JSON.toJSONString(this);
     }
